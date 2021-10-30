@@ -171,7 +171,7 @@ public class RegexTest {
         System.out.println("自定义引擎DFA用法耗时：" + (end - begin) / 1000d + "s");
     }
 
-    @Test
+    //@Test
     public void speedCompare2() {
         String pattern = ("([0-9]|[1-9][0-9]*)(\\.[0-9]*)?([eE][\\-+]?([0-9]|[1-9][0-9]*))?");
         String match = "123456.555e-10";

@@ -1,13 +1,16 @@
 package top.hackchen.lexer.generator;
 
-import top.hackchen.lexer.util.CompressionUtils;
-import top.hackchen.lexer.regex.RegexCombiner;
 import top.hackchen.lexer.option.Options;
+import top.hackchen.lexer.regex.RegexCombiner;
 import top.hackchen.lexer.regex.dfa.FastDFA;
 import top.hackchen.lexer.scanner.CodeScanner;
 import top.hackchen.lexer.scanner.FlexScanner;
+import top.hackchen.lexer.util.CompressionUtils;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -30,7 +33,6 @@ public class LexerGenerator {
     private final Options options;
 
     private BufferedWriter out;
-
     private int ident = 0;
 
     public LexerGenerator(String flexPath) throws IOException {
@@ -63,7 +65,6 @@ public class LexerGenerator {
 
     public void printToFile(String filePath) throws IOException {
         out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(filePath), StandardCharsets.UTF_8));
-        //out = new BufferedWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8));
         printHead();
         printClass();
         out.flush();
@@ -77,15 +78,17 @@ public class LexerGenerator {
                 "import java.nio.ByteOrder;\n" +
                 "import java.nio.IntBuffer;\n" +
                 "import java.nio.charset.StandardCharsets;\n" +
-                "import java.util.Arrays;\n" +
                 "import java.util.zip.DataFormatException;\n" +
-                "import java.util.zip.Deflater;\n" +
                 "import java.util.zip.Inflater;\n");
         printlnWithIdent("");
     }
 
     private void printClass() {
-        print("public class ");
+        if (options.classModifier.equals("")) {
+            print("class ");
+        } else {
+            print(options.classModifier + " class ");
+        }
         print(options.className);
         printlnWithIdent(" {");
         increaseIdent();
@@ -295,7 +298,7 @@ public class LexerGenerator {
                     "            e.printStackTrace();\n" +
                     "        }");
         } else {
-            printlnWithIdent("        System.out.println(\"Usage : java " + options.className + " <inputfile(s)>\");\n");
+            printlnWithIdent("        System.out.println(\"Usage : java " + options.className + " <input file(s)>\");\n");
         }
 
         printlnWithIdent("    }\n" +
@@ -312,7 +315,6 @@ public class LexerGenerator {
                 "            }\n" +
                 "            catch (java.io.IOException e) {\n" +
                 "                System.out.println(\"IO error scanning file \\\"\"+argv[i]+\"\\\"\");\n" +
-                "                System.out.println(e);\n" +
                 "            }\n" +
                 "            catch (Exception e) {\n" +
                 "                System.out.println(\"Unexpected exception:\");\n" +
@@ -360,12 +362,6 @@ public class LexerGenerator {
                 "        return peek(0);\n" +
                 "    }\n" +
                 "\n" +
-                "    /**\n" +
-                "     * 在当前位置往后读取第offset个字符\n" +
-                "     *\n" +
-                "     * @param offset 偏移量，必须是非负整数\n" +
-                "     * @return 字符\n" +
-                "     */\n" +
                 "    public int peek(int offset) {\n" +
                 "        if (bufferSize[currentBuffer] == -1) {\n" +
                 "            return -1;\n" +
@@ -387,12 +383,6 @@ public class LexerGenerator {
                 "        return c;\n" +
                 "    }\n" +
                 "\n" +
-                "    /**\n" +
-                "     * 移动当前读取指针，如果超过当前缓冲区大小，则更换缓冲区并且更新位置\n" +
-                "     *\n" +
-                "     * @param offset 当前缓冲区指针移动的偏移量，必须是非负整数\n" +
-                "     * @throws IOException 更换缓冲区的时候可能发生的IO异常\n" +
-                "     */\n" +
                 "    public void movePosTo(int offset) throws IOException {\n" +
                 "        if (bufferSize[currentBuffer] == -1) {\n" +
                 "            return;\n" +
@@ -406,15 +396,9 @@ public class LexerGenerator {
                 "            currentBuffer = 1 - currentBuffer;\n" +
                 "            readToBuffer();\n" +
                 "            movePosTo(offset - bufferSize[currentBuffer]);\n" +
-                "            //currPos = currPos + offset - bufferSize[currentBuffer];\n" +
                 "        }\n" +
                 "    }\n" +
                 "\n" +
-                "    /**\n" +
-                "     * 为当前缓冲区读取数据，并更新bufferOffset\n" +
-                "     *\n" +
-                "     * @throws IOException 如果读取时发生IO错误\n" +
-                "     */\n" +
                 "    private void readToBuffer() throws IOException {\n" +
                 "        bufferSize[currentBuffer] = reader.read(buffer[currentBuffer], 0, bufferMaxSize);\n" +
                 "    }\n" +
