@@ -289,7 +289,7 @@ public class LexerGenerator {
         if (options.isConsoleMode) {
             printlnWithIdent("        try {\n" +
                     "            DoubleBufferReader reader = new DoubleBufferReader(System.in);\n" +
-                    "            TestParser scanner = new TestParser(reader);\n" +
+                    "            " + options.className + " scanner = new " + options.className + "(reader);\n" +
                     "            scanner.lex();\n" +
                     "        } catch (Exception e) {\n" +
                     "            e.printStackTrace();\n" +
