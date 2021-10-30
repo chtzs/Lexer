@@ -1,6 +1,6 @@
 # Lexer
 
----
+
 一个可爱的、(可能)高效的、支持大部分Flex语法的一个Java词法分析器
 
 
@@ -14,7 +14,7 @@ java -jar c-flex.jar path/to/file [path/to/output]
 
 3.用Java编译生成的文件，尝试输入并解析吧~ 
 
----
+
 
 ### 语法分析规约文件格式
 格式仿照Flex文件，具体如下：
@@ -28,14 +28,14 @@ java -jar c-flex.jar path/to/file [path/to/output]
 %%
 [Code]
 ```
----
+
 
 #### Header
 这里是头定义，词法分析器会把这部分的内容原封不动地复制到目标文件的开头，一般用来导入包。
 
 **注意:连续的四个"%"会被词法分析器解释为两个"%"以转义**
 
----
+
 
 #### Definitions
 这里是定义区域，用来`定义单词符号串的正则规则`，或者`开关一些设置`，或者`内联一些代码`。
@@ -83,7 +83,7 @@ java -jar c-flex.jar path/to/file [path/to/output]
 
 **注意：连续的}%}%会被解释成一个}%以转义**
 
----
+
 
 #### Code
 再说吧，我累了
