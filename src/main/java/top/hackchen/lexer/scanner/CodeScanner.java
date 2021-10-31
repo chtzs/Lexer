@@ -28,16 +28,18 @@ public class CodeScanner extends AbstractScanner {
     }
 
     private final RegexScanner regexScanner;
+    private final InnerCodeScanner innerCodeScanner;
     private final List<PatternAndCode> patternAndCodes = new ArrayList<>();
 
     public CodeScanner(DoubleBufferReader reader, HashMap<String, String> idMap) {
         super(reader);
         regexScanner = new RegexScanner(reader, idMap);
         regexScanner.setEnd(' ');
+        innerCodeScanner = new InnerCodeScanner(reader);
     }
 
     /**
-     * 读取类似[Regex]:{[Code]}的代码
+     * 读取类似[Regex]:%{[Code]}%的代码
      *
      * @throws IOException 可能会抛出的IO异常
      */
@@ -50,25 +52,13 @@ public class CodeScanner extends AbstractScanner {
             } else {
                 //读取正则
                 regexScanner.scan();
-                //获取正则
                 String pattern = regexScanner.getRegex();
-                util.ignoreWhitespace();
-                if (reader.peek() != '{') {
-                    throw new RuntimeException("代码区格式不对！");
-                }
 
-                StringBuilder codeBuilder = new StringBuilder();
-                codeBuilder.append((char) reader.read());
-                int braceCount = 1;
-                while (reader.peek() != -1 && braceCount > 0) {
-                    if (reader.peek() == '{') {
-                        braceCount++;
-                    } else if (reader.peek() == '}') {
-                        braceCount--;
-                    }
-                    codeBuilder.append((char) reader.read());
-                }
-                String code = codeBuilder.toString();
+                util.ignoreWhitespace();
+
+                //读取内嵌代码
+                innerCodeScanner.scan();
+                String code = '{' + innerCodeScanner.getInnerCode() + '}';
 
                 patternAndCodes.add(new PatternAndCode(pattern, code));
             }

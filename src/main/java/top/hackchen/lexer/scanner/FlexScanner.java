@@ -23,7 +23,7 @@ public class FlexScanner implements AutoCloseable {
 
     public void scan() throws IOException {
         headScanner.scan();
-        definitionScanner.scan();
+         definitionScanner.scan();
         codeScanner.scan();
     }
 

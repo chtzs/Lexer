@@ -14,6 +14,7 @@ import static top.hackchen.lexer.scanner.util.ScannerUtil.*;
  */
 public class DefinitionScanner extends AbstractScanner {
     private final RegexScanner regexScanner;
+    private final InnerCodeScanner innerCodeScanner;
     private final Options options = new Options();
     private final HashMap<String, String> idMap = new HashMap<>();
     private String innerCode = "";
@@ -21,6 +22,7 @@ public class DefinitionScanner extends AbstractScanner {
     public DefinitionScanner(DoubleBufferReader reader) {
         super(reader);
         regexScanner = new RegexScanner(reader, idMap);
+        innerCodeScanner = new InnerCodeScanner(reader);
     }
 
     @Override
@@ -89,28 +91,8 @@ public class DefinitionScanner extends AbstractScanner {
     }
 
     private void readInnerCode() throws IOException {
-        reader.read();
-        reader.read();
-        StringBuilder innerCodeBuilder = new StringBuilder();
-        while (reader.peek() != -1) {
-            //用}%}%代替}%
-            if (reader.peek() == '}' && reader.peek(1) == '%'
-                    && reader.peek(2) == '}' && reader.peek(3) == '%') {
-                reader.read();
-                reader.read();
-                innerCodeBuilder.append((char) reader.read());
-                innerCodeBuilder.append((char) reader.read());
-            } else if (reader.peek() == '}' && reader.peek(1) == '%') {
-                break;
-            } else {
-                innerCodeBuilder.append((char) reader.read());
-            }
-        }
-        innerCode = innerCodeBuilder.toString();
-        //读掉最后一个}
-        reader.read();
-        reader.read();
-        util.ignoreWhitespace();
+        innerCodeScanner.scan();
+        innerCode = innerCodeScanner.getInnerCode();
     }
 
     /**

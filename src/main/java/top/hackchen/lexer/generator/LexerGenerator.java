@@ -232,7 +232,7 @@ public class LexerGenerator {
                 "                preSuccessOffset = -1;\n" +
                 "                offset = 0;\n" +
                 "                state = beginState;\n" +
-                "                continue;" +
+                "                continue;\n" +
                 "            }\n" +
                 "        } else {");
         if (options.isRollbackOptimization) {
@@ -242,12 +242,13 @@ public class LexerGenerator {
                     "            stateStack[sp] = state;\n" +
                     "            sp++;");
         }
-        printlnWithIdent("            //一旦成功，立刻清空两个栈，确保栈中只有不可到达终态的<状态，条件>组合\n" +
-                "            if (isFinalState[state]) {\n" +
+        printlnWithIdent("            if (isFinalState[state]) {\n" +
                 "                preSuccessType = finalStateType[state];\n" +
                 "                preSuccessOffset = offset;");
         if (options.isRollbackOptimization) {
-            printlnWithIdent("                sp = 0;");
+            printlnWithIdent(
+                    "                //一旦成功，立刻清空两个栈，确保栈中只有不可到达终态的<状态，条件>组合\n" +
+                            "                sp = 0;");
         }
         printlnWithIdent("            }\n" +
                 "        }\n" +
