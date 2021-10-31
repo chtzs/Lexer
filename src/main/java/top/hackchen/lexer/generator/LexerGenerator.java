@@ -140,7 +140,7 @@ public class LexerGenerator {
 
     private void printConstructor() {
         printlnWithIdent((options.classModifier.equals("") ? "" : options.classModifier + " ") + options.className + "(DoubleBufferReader reader) throws IOException, DataFormatException{\n" +
-                "    this.reader = reader\n;" +
+                "    this.reader = reader;\n" +
                 "    charToIndex = decompress(charToIndex);\n" +
                 "}");
     }
@@ -188,7 +188,7 @@ public class LexerGenerator {
 
     private void printLexFunc() {
         printlnWithIdent("");
-        printlnWithIdent("private void lex() throws IOException {\n" +
+        printlnWithIdent("public void lex() throws IOException {\n" +
                 "    int c;\n\n");
         if (options.isRollbackOptimization) {
             printlnWithIdent("    int bufferMaxSize = reader.bufferMaxSize;\n" +
@@ -326,7 +326,7 @@ public class LexerGenerator {
     }
 
     private void printDoubleBufferClass() {
-        printlnWithIdent("private static class DoubleBufferReader implements AutoCloseable {\n" +
+        printlnWithIdent("public static class DoubleBufferReader implements AutoCloseable {\n" +
                 "    private static final int DEFAULT_BUFFER_MAX_SIZE = 8192;\n" +
                 "\n" +
                 "    //文件reader\n" +
