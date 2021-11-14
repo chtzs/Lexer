@@ -92,7 +92,6 @@ public class LexerGenerator {
         print(options.className);
         printlnWithIdent(" {");
         increaseIdent();
-        printDoubleBufferClass();
         decreaseIndent();
         printInnerCode();
         increaseIdent();
@@ -324,102 +323,6 @@ public class LexerGenerator {
                 "        }\n" +
                 "    }\n" +
                 "}");
-    }
-
-    private void printDoubleBufferClass() {
-        printlnWithIdent("public static class DoubleBufferReader implements AutoCloseable {\n" +
-                "    private static final int DEFAULT_BUFFER_MAX_SIZE = 8192;\n" +
-                "\n" +
-                "    //文件reader\n" +
-                "    private final Reader reader;\n" +
-                "    //两个交替的缓冲区\n" +
-                "    private final char[][] buffer = new char[2][DEFAULT_BUFFER_MAX_SIZE];\n" +
-                "    //每个缓冲区的大小\n" +
-                "    private final int[] bufferSize = new int[2];\n" +
-                "    //当前选择的缓冲区\n" +
-                "    private int currentBuffer = 0;\n" +
-                "    //当前缓冲区的读取指针\n" +
-                "    private int currPos = 0;\n" +
-                "    //读取真实位置\n" +
-                "    public int realPos = 0;\n" +
-                "    //缓冲区最大大小\n" +
-                "    public final int bufferMaxSize;\n" +
-                "\n" +
-                "    public DoubleBufferReader(String file) throws IOException {\n" +
-                "        reader = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8);\n" +
-                "        this.bufferMaxSize = DEFAULT_BUFFER_MAX_SIZE;\n" +
-                "        init();\n" +
-                "    }\n" +
-                "\n" +
-                "\n" +
-                "    public DoubleBufferReader(InputStream in) throws IOException {\n" +
-                "        reader = new InputStreamReader(in);\n" +
-                "        this.bufferMaxSize = DEFAULT_BUFFER_MAX_SIZE;\n" +
-                "        init();\n" +
-                "    }\n" +
-                "\n" +
-                "\n" +
-                "    public int peek() {\n" +
-                "        return peek(0);\n" +
-                "    }\n" +
-                "\n" +
-                "    public int peek(int offset) {\n" +
-                "        if (bufferSize[currentBuffer] == -1) {\n" +
-                "            return -1;\n" +
-                "        } else if (currPos + offset < bufferSize[currentBuffer]) {\n" +
-                "            return buffer[currentBuffer][currPos + offset];\n" +
-                "        } else {\n" +
-                "            int nextPos = currPos + offset - bufferSize[currentBuffer];\n" +
-                "            if (nextPos < bufferSize[1 - currentBuffer]) {\n" +
-                "                return buffer[1 - currentBuffer][nextPos];\n" +
-                "            } else {\n" +
-                "                return -1;\n" +
-                "            }\n" +
-                "        }\n" +
-                "    }\n" +
-                "\n" +
-                "    public int read() throws IOException {\n" +
-                "        int c = peek();\n" +
-                "        movePosTo(1);\n" +
-                "        return c;\n" +
-                "    }\n" +
-                "\n" +
-                "    public void movePosTo(int offset) throws IOException {\n" +
-                "        if (bufferSize[currentBuffer] == -1) {\n" +
-                "            return;\n" +
-                "        }\n" +
-                "\n" +
-                "        if (currPos + offset < bufferSize[currentBuffer]) {\n" +
-                "            currPos += offset;\n" +
-                "            realPos += offset;\n" +
-                "        } else {\n" +
-                "            //切换缓冲区\n" +
-                "            currentBuffer = 1 - currentBuffer;\n" +
-                "            readToBuffer();\n" +
-                "            movePosTo(offset - bufferSize[currentBuffer]);\n" +
-                "        }\n" +
-                "    }\n" +
-                "\n" +
-                "    private void readToBuffer() throws IOException {\n" +
-                "        bufferSize[currentBuffer] = reader.read(buffer[currentBuffer], 0, bufferMaxSize);\n" +
-                "    }\n" +
-                "\n" +
-                "    private void init() throws IOException {\n" +
-                "        readToBuffer();\n" +
-                "        if (bufferSize[0] < bufferMaxSize) {\n" +
-                "            bufferSize[1] = -1;\n" +
-                "        } else {\n" +
-                "            currentBuffer = 1;\n" +
-                "            readToBuffer();\n" +
-                "            currentBuffer = 0;\n" +
-                "        }\n" +
-                "    }\n" +
-                "\n" +
-                "    @Override\n" +
-                "    public void close() throws IOException {\n" +
-                "        reader.close();\n" +
-                "    }\n" +
-                "}\n");
     }
 
     private void printArray(int[][] values) {

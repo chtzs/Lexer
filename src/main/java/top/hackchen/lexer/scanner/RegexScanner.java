@@ -1,6 +1,6 @@
 package top.hackchen.lexer.scanner;
 
-import top.hackchen.lexer.reader.DoubleBufferReader;
+import top.hackchen.lexer.runtime.reader.DoubleBufferReader;
 
 import java.io.IOException;
 import java.util.HashMap;

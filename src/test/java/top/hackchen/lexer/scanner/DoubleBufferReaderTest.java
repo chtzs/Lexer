@@ -1,7 +1,7 @@
 package top.hackchen.lexer.scanner;
 
 import org.junit.Test;
-import top.hackchen.lexer.reader.DoubleBufferReader;
+import top.hackchen.lexer.runtime.reader.DoubleBufferReader;
 
 import java.io.FileReader;
 import java.io.IOException;

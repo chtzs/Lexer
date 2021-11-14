@@ -1,4 +1,4 @@
-package top.hackchen.lexer.reader;
+package top.hackchen.lexer.runtime.reader;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -22,6 +22,10 @@ public class DoubleBufferReader implements AutoCloseable {
     private int currPos = 0;
     //读取真实位置
     public int realPos = 0;
+    //已经读取的行数
+    public int line = 1;
+    //当前行的位置
+    public int vPos = 0;
     //缓冲区最大大小
     private final int bufferMaxSize;
 
@@ -89,6 +93,15 @@ public class DoubleBufferReader implements AutoCloseable {
         }
 
         if (currPos + offset < bufferSize[currentBuffer]) {
+            for (int i = 0; i < offset; i++) {
+                int peek = peek(i);
+                if (peek == '\n') {
+                    line++;
+                    vPos = 0;
+                } else {
+                    vPos++;
+                }
+            }
             currPos += offset;
             realPos += offset;
         } else {
