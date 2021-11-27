@@ -10,4 +10,5 @@ public class Options {
     public boolean isUnicode = false;
     public boolean isRollbackOptimization = false;
     public boolean isConsoleMode = false;
+    public boolean isCParser = false;
 }

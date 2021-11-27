@@ -86,6 +86,9 @@ public class DefinitionScanner extends AbstractScanner {
             case "console":
                 options.isConsoleMode = true;
                 break;
+            case "c-parser":
+                options.isCParser = true;
+                break;
         }
         util.ignoreWhitespace();
     }

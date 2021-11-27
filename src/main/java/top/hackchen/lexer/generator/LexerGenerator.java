@@ -80,6 +80,10 @@ public class LexerGenerator {
                 "import java.nio.charset.StandardCharsets;\n" +
                 "import java.util.zip.DataFormatException;\n" +
                 "import java.util.zip.Inflater;\n");
+        if (options.isCParser) {
+            printlnWithIdent("import top.hackchen.parser.runtime.*;");
+            printlnWithIdent("import top.hackchen.parser.runtime.symbol.*;");
+        }
         printlnWithIdent("");
     }
 
@@ -97,8 +101,10 @@ public class LexerGenerator {
         increaseIdent();
         printVariable();
         printConstructor();
+        printCParserFunc();
         printDecompressFunc();
         printDoActionFunc();
+        printDisableAdvanceFunc();
         printLexFunc();
         printLexWordFunc();
         printMain();
@@ -107,6 +113,9 @@ public class LexerGenerator {
     }
 
     private void printVariable() {
+        if (options.isCParser) {
+            printlnWithIdent("public static final List<Symbol> _cParserTokenList = new ArrayList<>();\n");
+        }
         printlnWithIdent("private final int beginState = " + beginState + ";");
         printlnWithIdent("private final DoubleBufferReader reader;");
         printlnWithIdent("private int beginPos = 0;");
@@ -131,6 +140,7 @@ public class LexerGenerator {
         printArray(CompressionUtils.compress(charToIndex));
         print(";\n");
         printlnWithIdent("");
+        printLexVariable();
     }
 
     private void printInnerCode() {
@@ -140,8 +150,18 @@ public class LexerGenerator {
     private void printConstructor() {
         printlnWithIdent((options.classModifier.equals("") ? "" : options.classModifier + " ") + options.className + "(DoubleBufferReader reader) throws IOException, DataFormatException{\n" +
                 "    this.reader = reader;\n" +
-                "    charToIndex = decompress(charToIndex);\n" +
-                "}");
+                "    charToIndex = decompress(charToIndex);\n");
+        if (options.isRollbackOptimization) {
+            printlnWithIdent("    //回溯优化相关\n" +
+                    "    int _bufferMaxSize = reader.bufferMaxSize;\n" +
+                    "    _failed = new HashSet[transition.length];\n" +
+                    "    for (int i = 0; i < transition.length; i++) {\n" +
+                    "        _failed[i] = new HashSet<>();\n" +
+                    "    }\n" +
+                    "    _offsetStack = new int[_bufferMaxSize];\n" +
+                    "    _stateStack = new int[_bufferMaxSize];\n");
+        }
+        printlnWithIdent("}");
     }
 
     private void printDecompressFunc() {
@@ -185,93 +205,143 @@ public class LexerGenerator {
                 "}");
     }
 
+    private void printCParserFunc() {
+        if (!options.isCParser) return;
+        printlnWithIdent("");
+        printlnWithIdent("public Symbol createWith(String name) {\n" +
+                "    Symbol symbol = new Symbol(name);\n" +
+                "    symbol.pos = reader.vPos;\n" +
+                "    symbol.line = reader.line;\n" +
+                "    return symbol;\n" +
+                "}\n" +
+                "\n" +
+                "public Symbol createWithInt(String name, int value) {\n" +
+                "    Symbol symbol = createWith(name);\n" +
+                "    symbol.intValue = value;\n" +
+                "    return symbol;\n" +
+                "}\n" +
+                "\n" +
+                "public Symbol createWithLong(String name, long value) {\n" +
+                "    Symbol symbol = createWith(name);\n" +
+                "    symbol.longValue = value;\n" +
+                "    return symbol;\n" +
+                "}\n" +
+                "\n" +
+                "public Symbol createWithDouble(String name, double value) {\n" +
+                "    Symbol symbol = createWith(name);\n" +
+                "    symbol.doubleValue = value;\n" +
+                "    return symbol;\n" +
+                "}\n" +
+                "\n" +
+                "public Symbol createWithFloat(String name, float value) {\n" +
+                "    Symbol symbol = createWith(name);\n" +
+                "    symbol.floatValue = value;\n" +
+                "    return symbol;\n" +
+                "}\n" +
+                "\n" +
+                "public Symbol createWithString(String name, long value) {\n" +
+                "    Symbol symbol = createWith(name);\n" +
+                "    symbol.stringValue = value;\n" +
+                "    return symbol;\n" +
+                "}\n" +
+                "\n" +
+                "public Symbol createWithValue(String name, Object value) {\n" +
+                "    Symbol symbol = createWith(name);\n" +
+                "    symbol.value = value;\n" +
+                "    return symbol;\n" +
+                "}");
+        printlnWithIdent("");
+    }
+
+    private void printDisableAdvanceFunc() {
+        printlnWithIdent("public void disableAdvance() throws IOException {\n" +
+                "    preSuccessOffset = -1;\n" +
+                "}\n\n");
+    }
+
+    private void printLexVariable() {
+        if (options.isRollbackOptimization) {
+            printlnWithIdent("//回溯相关\n" +
+                    "//失败数组，只要是_failed[状态编号]存在[当前输入]的，必定不能走到终状态。\n" +
+                    "Set<Integer>[] _failed;\n" +
+                    "//读取指针偏移量栈，用来记录出错回滚位置\n" +
+                    "int[] _offsetStack;\n" +
+                    "//状态栈，用来记录经过的状态\n" +
+                    "int[] _stateStack;\n" +
+                    "//栈顶指针\n" +
+                    "int _sp = 0;");
+        }
+    }
+
     private void printLexFunc() {
         printlnWithIdent("");
-        printlnWithIdent("public void lex() throws IOException {\n" +
+        printlnWithIdent("public boolean lex() throws IOException {\n" +
                 "    int c;\n\n");
-        if (options.isRollbackOptimization) {
-            printlnWithIdent("    int bufferMaxSize = reader.bufferMaxSize;\n" +
-                    "    //失败数组，只要是failed[状态编号]存在[当前输入]的，必定不能走到终状态。\n" +
-                    "    Set<Integer>[] failed = new HashSet[transition.length];\n" +
-                    "    for (int i = 0; i < transition.length; i++) {\n" +
-                    "        failed[i] = new HashSet<>();\n" +
-                    "    }\n" +
-                    "    //读取指针偏移量栈，用来记录出错回滚位置\n" +
-                    "    int[] offsetStack = new int[bufferMaxSize];\n" +
-                    "    //状态栈，用来记录经过的状态\n" +
-                    "    int[] stateStack = new int[bufferMaxSize];\n" +
-                    "    //栈顶指针\n" +
-                    "    int sp = 0;");
-        }
-        printlnWithIdent("    while ((c = reader.peek(offset)) != -1) {\n" +
+
+        printlnWithIdent("    while((c = reader.peek(offset)) != -1) {\n" +
                 "        int condition = charToIndex[c];\n" +
                 "        if (condition < 0) {\n" +
                 "            throw new RuntimeException(\"词法分析遇到错误: 字符\" + c + \"在规约中未定义！\");\n" +
                 "        }\n" +
                 "        state = transition[state][condition];\n" +
                 "        //死状态，要尝试回溯\n" +
-                "        if (state == -1" + (options.isRollbackOptimization ? " || failed[state].contains(reader.realPos)" : "") +
+                "        if (state == -1" + (options.isRollbackOptimization ? " || _failed[state].contains(reader.realPos)" : "") +
                 ") {\n" +
                 "            if (preSuccessType == -1) {\n" +
                 "                String msg = \"Token\" + lexWord() + \"不存在！\";\n" +
                 "                throw new RuntimeException(\"词法分析遇到错误: \" + msg);\n" +
                 "            } else {");
         if (options.isRollbackOptimization) {
-            printlnWithIdent("                //这时候栈中保存的都是不可到达终态的<状态，条件>组合\n" +
-                    "                while (sp > 0) {\n" +
-                    "                    failed[stateStack[sp - 1]].add(offsetStack[sp - 1]);\n" +
-                    "                    sp--;\n" +
-                    "                }");
+            printlnWithIdent("                    //这时候栈中保存的都是不可到达终态的<状态，条件>组合\n" +
+                    "                    while (_sp > 0) {\n" +
+                    "                        _failed[_stateStack[_sp - 1]].add(_offsetStack[_sp - 1]);\n" +
+                    "                        _sp--;\n" +
+                    "                    }");
         }
         printlnWithIdent("                //回溯并输出\n" +
-                "                doAction(preSuccessType);\n" +
+                "                try {\n" +
+                "                    doAction(preSuccessType);\n" +
+                "                } catch (Exception e) {\n" +
+                "                    throw new RuntimeException(e);\n" +
+                "                }\n" +
                 "                \n" +
                 "                reader.movePosTo(preSuccessOffset + 1);\n" +
                 "                preSuccessType = -1;\n" +
                 "                preSuccessOffset = -1;\n" +
                 "                offset = 0;\n" +
                 "                state = beginState;\n" +
-                "                continue;\n" +
+                "                return true;\n" +
                 "            }\n" +
                 "        } else {");
         if (options.isRollbackOptimization) {
             printlnWithIdent("            //偏移量入栈\n" +
-                    "            offsetStack[sp] = reader.realPos + offset;\n" +
+                    "            _offsetStack[_sp] = reader.realPos + offset;\n" +
                     "            //状态入栈\n" +
-                    "            stateStack[sp] = state;\n" +
-                    "            sp++;");
+                    "            _stateStack[_sp] = state;\n" +
+                    "            _sp++;");
         }
         printlnWithIdent("            if (isFinalState[state]) {\n" +
                 "                preSuccessType = finalStateType[state];\n" +
                 "                preSuccessOffset = offset;");
         if (options.isRollbackOptimization) {
-            printlnWithIdent(
-                    "                //一旦成功，立刻清空两个栈，确保栈中只有不可到达终态的<状态，条件>组合\n" +
-                            "                sp = 0;");
+            printlnWithIdent("                //一旦成功，立刻清空两个栈，确保栈中只有不可到达终态的<状态，条件>组合\n" +
+                    "                _sp = 0;");
         }
-        printlnWithIdent("            }\n" +
+        printlnWithIdent("        }\n" +
                 "        }\n" +
                 "        offset++;\n" +
                 "    }\n" +
                 "    if (preSuccessType != -1) {\n" +
-                "        doAction(preSuccessType);\n" +
+                "        try {"+
+                "            doAction(preSuccessType);\n" +
+                "            preSuccessType = -1;\n" +
+                "        } catch (Exception e) {\n" +
+                "            throw new RuntimeException(e);\n" +
+                "        }\n" +
+                "        return true;\n" +
                 "    }\n" +
-                "}");
-    }
-
-    private void printDoActionFunc() {
-        printlnWithIdent("");
-        printlnWithIdent("private void doAction(int type) {\n" +
-                "    switch (type) {\n");
-        for (int i = 0; i < codes.length; i++) {
-            printlnWithIdent("        case " + i + ":");
-            print("            ");
-            printlnWithIdent(codes[i]);
-            print("            ");
-            printlnWithIdent("break;");
-        }
-        printlnWithIdent("    }\n" +
-                "}");
+                "    return false;\n" +
+                "}\n");
     }
 
     private void printLexWordFunc() {
@@ -282,6 +352,21 @@ public class LexerGenerator {
                 "        wordChar[i] = (char) reader.peek(i);\n" +
                 "    }\n" +
                 "    return new String(wordChar);\n" +
+                "}");
+    }
+
+    private void printDoActionFunc() {
+        printlnWithIdent("");
+        printlnWithIdent("private void doAction(int type) throws Exception {\n" +
+                "    switch (type) {\n");
+        for (int i = 0; i < codes.length; i++) {
+            printlnWithIdent("        case " + i + ":");
+            print("            ");
+            printlnWithIdent(codes[i]);
+            print("            ");
+            printlnWithIdent("break;");
+        }
+        printlnWithIdent("    }\n" +
                 "}");
     }
 
@@ -307,7 +392,7 @@ public class LexerGenerator {
                 "            try {\n" +
                 "                DoubleBufferReader reader = new DoubleBufferReader(argv[i]);\n" +
                 "                " + options.className + " scanner = new " + options.className + "(reader);\n" +
-                "                scanner.lex();\n" +
+                "                while(scanner.lex());\n" +
                 "                reader.close();\n" +
                 "            }\n" +
                 "            catch (java.io.FileNotFoundException e) {\n" +
